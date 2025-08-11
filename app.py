@@ -13,7 +13,7 @@ import time
 
 # Configure page
 st.set_page_config(
-    page_title="Legal Case Assistant", 
+    page_title="LegalEdge AI", 
     page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -56,11 +56,11 @@ st.markdown("""
         margin: 0.5rem 0;
     }
     .user-message {
-        background-color: #e3f2fd;
+        background-color: #000;
         margin-left: 2rem;
     }
     .assistant-message {
-        background-color: #f1f8e9;
+        background-color: green;
         margin-right: 2rem;
     }
 </style>
@@ -70,7 +70,7 @@ class LegalAssistant:
     def __init__(self, api_key: str):
         """Initialize the Legal Assistant with Gemini API"""
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-pro-latest')
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
         self.case_memory = {}
 
     def extract_pdf_text(self, uploaded_file) -> str:
@@ -185,7 +185,7 @@ class LegalAssistant:
         SIMILAR CASES FOUND:
         {chr(10).join([f"- {case.get('title', '')}: {case.get('description', '')}" for case in similar_cases])}
 
-        Please provide a comprehensive analysis in the following format:
+        Please provide a comprehensive analysis in the following format within 500 words:
 
         **CASE STRENGTH ASSESSMENT (1-10 scale):** [Your assessment with reasoning]
 
@@ -234,9 +234,9 @@ class LegalAssistant:
 
         Current Question: {question}
 
-        Please provide a helpful, accurate response based on Indian legal principles. 
-        Always include relevant case law or statutory references when possible.
-        Add appropriate disclaimers about seeking professional legal advice.
+        Please provide a helpful, accurate response based on Indian legal principles in short. 
+        Always include relevant case law or statutory references when possible in short.
+        Add appropriate disclaimers about seeking professional legal advice in short.
         """
 
         try:
@@ -247,16 +247,15 @@ class LegalAssistant:
 
 # Initialize the app
 def main():
-    st.markdown('<h1 class="main-header">⚖️ Legal Case Assistant</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">⚖️ LegalEdge AI</h1>', unsafe_allow_html=True)
 
     # Sidebar for API key
     with st.sidebar:
         st.header("🔑 Configuration")
-        api_key = st.text_input("Enter your Gemini API Key:", type="password", help="Get your API key from Google AI Studio")
+        api_key = st.text_input("Enter your Key:", type="password", help="Get your API key from Google AI Studio")
 
         if not api_key:
-            st.error("Please enter your Gemini API key to continue.")
-            st.info("Get your free API key at: https://makersuite.google.com/app/apikey")
+            st.error("Please enter your key to continue.")
             st.stop()
 
         st.success("API Key configured!")
