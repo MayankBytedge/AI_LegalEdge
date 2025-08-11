@@ -1,4 +1,3 @@
-
 import streamlit as st
 import json
 import os
@@ -22,6 +21,19 @@ st.set_page_config(
 # Custom CSS for better UI
 st.markdown("""
 <style>
+
+    /* Set sidebar background to teal */
+    .css-1d391kg, .css-1d391kg .stSidebar, .stSidebar {
+        background-color: teal !important;
+    }
+    
+    /* Sidebar text color for better contrast */
+    .css-1d391kg .stSidebar [data-testid="stSidebar"] > div {
+        background-color: teal !important;
+        color: white !important;
+    }
+    
+    
     .main-header {
         font-size: 2.5rem;
         font-weight: 700;
@@ -56,11 +68,12 @@ st.markdown("""
         margin: 0.5rem 0;
     }
     .user-message {
-        background-color: #000;
+        background-color: #fff;
+        color: #000;
         margin-left: 2rem;
     }
     .assistant-message {
-        background-color: green;
+        background: linear-gradient(135deg, #1e3a8a 0%, #06b6d4 100%);
         margin-right: 2rem;
     }
 </style>
@@ -251,6 +264,7 @@ def main():
 
     # Sidebar for API key
     with st.sidebar:
+        st.image("logo2.svg")
         st.header("🔑 Configuration")
         api_key = st.text_input("Enter your Key:", type="password", help="Get your API key from Google AI Studio")
 
@@ -283,7 +297,7 @@ def main():
         st.session_state.case_analyzed = False
 
     # Main interface
-    tab1, tab2 = st.tabs(["📄 Upload & Analyze Case", "💬 Chat About Case"])
+    tab1, tab2 = st.tabs([" Upload & Analyze Case", " Chat About Case"])
 
     with tab1:
         st.header("Upload Your Legal Case")
@@ -353,32 +367,53 @@ def main():
         if not st.session_state.case_analyzed:
             st.info("👆 Please upload and analyze a case first in the 'Upload & Analyze Case' tab.")
         else:
+            # Create a container for chat messages that can be scrolled to
+            chat_container = st.container()
+            
             # Display chat history
-            for message in st.session_state.chat_history:
-                if message["role"] == "user":
-                    st.markdown(f'<div class="chat-message user-message"><strong>You:</strong> {message["content"]}</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="chat-message assistant-message"><strong>Legal Assistant:</strong> {message["content"]}</div>', unsafe_allow_html=True)
+            with chat_container:
+                for message in st.session_state.chat_history:
+                    if message["role"] == "user":
+                        st.markdown(f'<div class="chat-message user-message"><strong>You:</strong> {message["content"]}</div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="chat-message assistant-message"><strong>Legal Assistant:</strong> {message["content"]}</div>', unsafe_allow_html=True)
 
-            # Chat input
-            question = st.text_input("Ask a question about your case:", placeholder="e.g., What are the strongest arguments I can make?")
+            # Function to handle message sending
+            def send_message(question_text):
+                if question_text.strip():
+                    # Add user message to history
+                    st.session_state.chat_history.append({"role": "user", "content": question_text})
 
-            if st.button("Send", type="primary") and question:
-                # Add user message to history
-                st.session_state.chat_history.append({"role": "user", "content": question})
+                    with st.spinner("Thinking..."):
+                        response = st.session_state.assistant.chat_about_case(
+                            question_text, 
+                            st.session_state.case_details,
+                            st.session_state.chat_history
+                        )
 
-                with st.spinner("Thinking..."):
-                    response = st.session_state.assistant.chat_about_case(
-                        question, 
-                        st.session_state.case_details,
-                        st.session_state.chat_history
-                    )
+                    # Add assistant response to history
+                    st.session_state.chat_history.append({"role": "assistant", "content": response})
 
-                # Add assistant response to history
-                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                    # Clear the input and rerun to show new messages
+                    st.rerun()
 
-                # Refresh the page to show new messages
-                st.rerun()
+            # Chat input form with enter key support
+            with st.form("chat_form", clear_on_submit=True):
+                question = st.text_input("Ask a question about your case:", placeholder="e.g., What are the strongest arguments I can make?", key="chat_input")
+                submitted = st.form_submit_button("Send", type="primary")
+                
+                if submitted:
+                    send_message(question)
+
+            # Auto-scroll to bottom using JavaScript
+            if st.session_state.chat_history:
+                st.markdown("""
+                <script>
+                setTimeout(function() {
+                    window.parent.document.querySelector('section.main').scrollTop = window.parent.document.querySelector('section.main').scrollHeight;
+                }, 100);
+                </script>
+                """, unsafe_allow_html=True)
 
             # Quick question buttons
             st.subheader("💡 Quick Questions")
@@ -386,39 +421,15 @@ def main():
 
             with col1:
                 if st.button("What are my chances?"):
-                    st.session_state.chat_history.append({"role": "user", "content": "What are my chances of winning this case?"})
-                    with st.spinner("Analyzing..."):
-                        response = st.session_state.assistant.chat_about_case(
-                            "What are my chances of winning this case?",
-                            st.session_state.case_details,
-                            st.session_state.chat_history
-                        )
-                    st.session_state.chat_history.append({"role": "assistant", "content": response})
-                    st.rerun()
+                    send_message("What are my chances of winning this case?")
 
             with col2:
                 if st.button("Key arguments?"):
-                    st.session_state.chat_history.append({"role": "user", "content": "What are the key arguments I should focus on?"})
-                    with st.spinner("Analyzing..."):
-                        response = st.session_state.assistant.chat_about_case(
-                            "What are the key arguments I should focus on?",
-                            st.session_state.case_details,
-                            st.session_state.chat_history
-                        )
-                    st.session_state.chat_history.append({"role": "assistant", "content": response})
-                    st.rerun()
+                    send_message("What are the key arguments I should focus on?")
 
             with col3:
                 if st.button("What to research?"):
-                    st.session_state.chat_history.append({"role": "user", "content": "What areas should I research further?"})
-                    with st.spinner("Analyzing..."):
-                        response = st.session_state.assistant.chat_about_case(
-                            "What areas should I research further?",
-                            st.session_state.case_details,
-                            st.session_state.chat_history
-                        )
-                    st.session_state.chat_history.append({"role": "assistant", "content": response})
-                    st.rerun()
+                    send_message("What areas should I research further?")
 
             # Clear chat button
             if st.button("🗑️ Clear Chat"):
